@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AgoraService } from '../../services/agora.service';
 import { ChatService, ChatMessage } from '../../services/chat.service';
 import { ILocalVideoTrack, ILocalAudioTrack } from 'agora-rtc-sdk-ng';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-video-call',
@@ -38,7 +39,7 @@ import { ILocalVideoTrack, ILocalAudioTrack } from 'agora-rtc-sdk-ng';
                 playsinline>
               </video>
               <div class="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-lg text-sm">
-                You {{ !isVideoEnabled ? '(Camera Off)' : '' }}
+                You {{ !isVideoEnabled ? '(Camera Off)' : '' }} {{ isScreenSharing ? '(Screen Sharing)' : '' }}
               </div>
             </div>
 
@@ -96,8 +97,9 @@ import { ILocalVideoTrack, ILocalAudioTrack } from 'agora-rtc-sdk-ng';
 
             <button
               (click)="toggleScreenShare()"
-              [class]="isScreenSharing ? 'control-btn bg-blue-500 text-white' : 'control-btn bg-gray-600 text-white'"
-              title="Screen Share"
+              [disabled]="!isScreenShareSupported"
+              [class]="getScreenShareButtonClass()"
+              [title]="getScreenShareTooltip()"
             >
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
@@ -173,6 +175,7 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
   isMicEnabled = true;
   isVideoEnabled = true;
   isScreenSharing = false;
+  isScreenShareSupported = false;
   remoteUserConnected = false;
   
   messages: ChatMessage[] = [];
@@ -180,6 +183,7 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private localVideoTrack: ILocalVideoTrack | null = null;
   private localAudioTrack: ILocalAudioTrack | null = null;
+  private remoteUsersSubscription: Subscription | null = null;
 
   constructor(
     private route: ActivatedRoute,
@@ -189,6 +193,9 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
   ) {}
 
   ngOnInit() {
+    // Check if screen share is supported
+    this.isScreenShareSupported = this.agoraService.isScreenShareSupported();
+
     this.route.queryParams.subscribe(params => {
       this.username = params['username'] || '';
       this.channelName = params['channel'] || '';
@@ -205,6 +212,11 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
       this.messages = messages;
       setTimeout(() => this.scrollToBottom(), 100);
     });
+
+    // Subscribe to remote users updates
+    this.remoteUsersSubscription = this.agoraService.remoteUsers$.subscribe(remoteUsers => {
+      this.updateRemoteVideo(remoteUsers);
+    });
   }
 
   ngAfterViewInit() {
@@ -213,6 +225,9 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnDestroy() {
     this.leaveCall();
+    if (this.remoteUsersSubscription) {
+      this.remoteUsersSubscription.unsubscribe();
+    }
   }
 
   private async initializeCall() {
@@ -228,7 +243,6 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
       }
       
       this.connectionStatus = 'Connected';
-      this.checkRemoteUsers();
       
     } catch (error) {
       console.error('Failed to initialize call:', error);
@@ -236,43 +250,64 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  private checkRemoteUsers() {
-    const interval = setInterval(() => {
-      const remoteUsers = this.agoraService.getRemoteUsers();
-      if (remoteUsers.length > 0) {
-        this.remoteUserConnected = true;
-        const remoteUser = remoteUsers[0];
-        
-        if (remoteUser.videoTrack && this.remoteVideoRef) {
-          remoteUser.videoTrack.play(this.remoteVideoRef.nativeElement);
+  private updateRemoteVideo(remoteUsers: any[]) {
+    if (remoteUsers.length > 0) {
+      this.remoteUserConnected = true;
+      const remoteUser = remoteUsers[0];
+      
+      // Handle video track updates
+      if (remoteUser.videoTrack && this.remoteVideoRef) {
+        // Stop any existing video first
+        const videoElement = this.remoteVideoRef.nativeElement;
+        if (videoElement.srcObject) {
+          videoElement.srcObject = null;
         }
         
-        clearInterval(interval);
+        // Play the new video track
+        remoteUser.videoTrack.play(videoElement);
+      } else if (!remoteUser.videoTrack && this.remoteVideoRef) {
+        // Clear video when remote user turns off camera
+        const videoElement = this.remoteVideoRef.nativeElement;
+        if (videoElement.srcObject) {
+          videoElement.srcObject = null;
+        }
       }
-    }, 1000);
+      
+      // Audio is automatically handled in the service now
+    } else {
+      this.remoteUserConnected = false;
+      // Clear remote video when no users
+      if (this.remoteVideoRef) {
+        const videoElement = this.remoteVideoRef.nativeElement;
+        if (videoElement.srcObject) {
+          videoElement.srcObject = null;
+        }
+      }
+    }
   }
 
   async toggleMicrophone() {
     this.isMicEnabled = await this.agoraService.toggleMicrophone();
-    this.checkRemoteUsers()
   }
 
   async toggleCamera() {
     this.isVideoEnabled = await this.agoraService.toggleCamera();
-    this.checkRemoteUsers()
   }
 
   async toggleScreenShare() {
+    if (!this.isScreenShareSupported) {
+      alert('Screen sharing is not supported on this device');
+      return;
+    }
+
     if (this.isScreenSharing) {
       await this.agoraService.stopScreenShare();
       this.isScreenSharing = false;
-      
       
       // Restore camera video
       if (this.localVideoTrack && this.localVideoRef) {
         this.localVideoTrack.play(this.localVideoRef.nativeElement);
       }
-      this.checkRemoteUsers()
     } else {
       const screenTrack = await this.agoraService.startScreenShare();
       if (screenTrack) {
@@ -280,9 +315,26 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
         if (this.localVideoRef) {
           screenTrack.play(this.localVideoRef.nativeElement);
         }
+      } else {
+        alert('Failed to start screen sharing. Please try again.');
       }
-      this.checkRemoteUsers()
     }
+  }
+
+  getScreenShareButtonClass(): string {
+    if (!this.isScreenShareSupported) {
+      return 'control-btn bg-gray-400 text-gray-600 cursor-not-allowed';
+    }
+    return this.isScreenSharing 
+      ? 'control-btn bg-blue-500 text-white' 
+      : 'control-btn bg-gray-600 text-white';
+  }
+
+  getScreenShareTooltip(): string {
+    if (!this.isScreenShareSupported) {
+      return 'Screen sharing not supported on this device';
+    }
+    return this.isScreenSharing ? 'Stop Screen Share' : 'Start Screen Share';
   }
 
   async endCall() {

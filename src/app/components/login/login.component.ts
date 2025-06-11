@@ -23,7 +23,7 @@ import { ChatService } from '../../services/chat.service';
 
         <form (ngSubmit)="joinCall()" class="space-y-6">
           <div>
-            <label for="username" class="block text-sm font-medium text-gray-700 mb-2">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
               Username
             </label>
             <input
@@ -32,13 +32,13 @@ import { ChatService } from '../../services/chat.service';
               [(ngModel)]="username"
               name="username"
               required
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              class="outline-none w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-300 focus:border-blue-500 transition-all duration-300"
               placeholder="Enter your username"
             >
           </div>
 
           <div>
-            <label for="channelName" class="block text-sm font-medium text-gray-700 mb-2">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
               Channel Name
             </label>
             <input
@@ -47,7 +47,7 @@ import { ChatService } from '../../services/chat.service';
               [(ngModel)]="channelName"
               name="channelName"
               required
-              class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              class="outline-none w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-300 focus:border-blue-500 transition-all duration-300"
               placeholder="Enter channel name"
             >
           </div>

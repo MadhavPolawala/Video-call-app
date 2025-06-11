@@ -254,10 +254,12 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
 
   async toggleMicrophone() {
     this.isMicEnabled = await this.agoraService.toggleMicrophone();
+    this.checkRemoteUsers()
   }
 
   async toggleCamera() {
     this.isVideoEnabled = await this.agoraService.toggleCamera();
+    this.checkRemoteUsers()
   }
 
   async toggleScreenShare() {
@@ -265,10 +267,12 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
       await this.agoraService.stopScreenShare();
       this.isScreenSharing = false;
       
+      
       // Restore camera video
       if (this.localVideoTrack && this.localVideoRef) {
         this.localVideoTrack.play(this.localVideoRef.nativeElement);
       }
+      this.checkRemoteUsers()
     } else {
       const screenTrack = await this.agoraService.startScreenShare();
       if (screenTrack) {
@@ -277,6 +281,7 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
           screenTrack.play(this.localVideoRef.nativeElement);
         }
       }
+      this.checkRemoteUsers()
     }
   }
 

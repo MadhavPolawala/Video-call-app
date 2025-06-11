@@ -9,6 +9,7 @@ import AgoraRTC, {
   UID,
   ScreenVideoTrackInitConfig
 } from 'agora-rtc-sdk-ng';
+import { BehaviorSubject } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
@@ -19,6 +20,10 @@ export class AgoraService {
   private localAudioTrack: ILocalAudioTrack | null = null;
   private localScreenTrack: ILocalVideoTrack | any = null;
   private remoteUsers: any[] = [];
+  
+  // Observable for remote users updates
+  private remoteUsersSubject = new BehaviorSubject<any[]>([]);
+  public remoteUsers$ = this.remoteUsersSubject.asObservable();
   
   // Replace with your Agora App ID
   private readonly APP_ID = '4075aaf382874071b318f6cfb80d8d98';
@@ -39,14 +44,27 @@ export class AgoraService {
           existingUser.videoTrack = user.videoTrack;
         } else if (mediaType === 'audio') {
           existingUser.audioTrack = user.audioTrack;
+          // IMPORTANT: Play audio immediately when received
+          if (user.audioTrack) {
+            user.audioTrack.play();
+          }
         }
       } else {
-        this.remoteUsers.push({
+        const newUser = {
           uid: user.uid,
           videoTrack: mediaType === 'video' ? user.videoTrack : null,
           audioTrack: mediaType === 'audio' ? user.audioTrack : null
-        });
+        };
+        this.remoteUsers.push(newUser);
+        
+        // IMPORTANT: Play audio immediately for new users
+        if (mediaType === 'audio' && user.audioTrack) {
+          user.audioTrack.play();
+        }
       }
+      
+      // Notify subscribers about the update
+      this.remoteUsersSubject.next([...this.remoteUsers]);
     });
 
     this.client.on('user-unpublished', (user, mediaType) => {
@@ -54,16 +72,29 @@ export class AgoraService {
       const existingUser = this.remoteUsers.find(u => u.uid === user.uid);
       if (existingUser) {
         if (mediaType === 'video') {
+          // Stop the video track if it exists
+          if (existingUser.videoTrack) {
+            existingUser.videoTrack.stop();
+          }
           existingUser.videoTrack = null;
         } else if (mediaType === 'audio') {
+          // Stop the audio track if it exists
+          if (existingUser.audioTrack) {
+            existingUser.audioTrack.stop();
+          }
           existingUser.audioTrack = null;
         }
       }
+      
+      // Notify subscribers about the update
+      this.remoteUsersSubject.next([...this.remoteUsers]);
     });
 
     this.client.on('user-left', (user) => {
       console.log('User left:', user.uid);
       this.remoteUsers = this.remoteUsers.filter(u => u.uid !== user.uid);
+      // Notify subscribers about the update
+      this.remoteUsersSubject.next([...this.remoteUsers]);
     });
   }
 
@@ -116,6 +147,7 @@ export class AgoraService {
       console.log('Left channel successfully');
       
       this.remoteUsers = [];
+      this.remoteUsersSubject.next([]);
     } catch (error) {
       console.error('Failed to leave channel:', error);
       throw error;
@@ -140,8 +172,19 @@ export class AgoraService {
     return false;
   }
 
+  // Check if screen share is supported (not on mobile)
+  isScreenShareSupported(): boolean {
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    return !isMobile && 'getDisplayMedia' in navigator.mediaDevices;
+  }
+
   async startScreenShare(): Promise<ILocalVideoTrack | null> {
     try {
+      // Check if screen share is supported
+      if (!this.isScreenShareSupported()) {
+        throw new Error('Screen sharing is not supported on this device');
+      }
+
       if (this.localVideoTrack) {
         await this.client.unpublish(this.localVideoTrack);
       }

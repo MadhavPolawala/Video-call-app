@@ -13,7 +13,7 @@ import { ILocalVideoTrack, ILocalAudioTrack } from 'agora-rtc-sdk-ng';
   template: `
     <div class="min-h-screen bg-gray-900 flex">
       <!-- Main Video Area -->
-      <div class="flex-1 p-6">
+      <div class="flex-1 p-6 h-screen">
         <div class="h-full flex flex-col">
           <!-- Header -->
           <div class="flex justify-between items-center mb-6">
@@ -27,7 +27,7 @@ import { ILocalVideoTrack, ILocalAudioTrack } from 'agora-rtc-sdk-ng';
           </div>
 
           <!-- Video Grid -->
-          <div class="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div class="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 h-[calc(100%-150px)]">
             <!-- Local Video -->
             <div class="video-container bg-gray-800 relative">
               <video 

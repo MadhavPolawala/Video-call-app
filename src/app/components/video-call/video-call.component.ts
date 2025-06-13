@@ -12,7 +12,7 @@ import { Subscription } from 'rxjs';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="h-screen bg-gray-900 flex">
+    <div class="min-h-screen bg-gray-900 flex">
       <div class="fixed bottom-0.5 right-0.5 text-[10px] leading-[10px] font-mono text-blue-400/5">Polawala</div>
       <!-- Main Video Area -->
       <div class="flex-1 p-4 h-screen">

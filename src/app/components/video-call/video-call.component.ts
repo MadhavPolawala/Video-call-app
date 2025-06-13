@@ -14,7 +14,7 @@ import { Subscription } from 'rxjs';
   template: `
     <div class="min-h-screen bg-gray-900 flex">
       <!-- Main Video Area -->
-      <div class="flex-1 p-6 h-screen">
+      <div class="flex-1 p-4 min-h-screen">
         <div class="h-full flex flex-col">
           <!-- Header -->
           <div class="flex justify-between items-center mb-6">
@@ -40,7 +40,19 @@ import { Subscription } from 'rxjs';
               </video>
               <div class="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-lg text-sm">
                 You {{ !isVideoEnabled ? '(Camera Off)' : '' }} {{ isScreenSharing ? '(Screen Sharing)' : '' }}
+                {{ getCurrentCameraLabel() }}
               </div>
+              <!-- Camera Switch Button (overlay on video) -->
+              <button
+                *ngIf="isCameraSwitchSupported && isVideoEnabled && !isScreenSharing"
+                (click)="switchCamera()"
+                class="absolute top-4 right-4 w-10 h-10 bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-full flex items-center justify-center transition-all duration-200"
+                title="Switch Camera"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                </svg>
+              </button>
             </div>
 
             <!-- Remote Video -->
@@ -92,6 +104,19 @@ import { Subscription } from 'rxjs';
               </svg>
               <svg *ngIf="!isVideoEnabled" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18 17.75M6 17.25l2.364-2.364m8 0L18 17.25M6 17.25v-1.5M18 17.25v-1.5m0 0V15M6 15.75v-1.5m12 1.5v-1.5m0 0V13.5M6 14.25v-1.5"></path>
+              </svg>
+            </button>
+
+            <!-- Camera Switch Button (in controls) -->
+            <button
+              *ngIf="isCameraSwitchSupported"
+              (click)="switchCamera()"
+              [disabled]="!isVideoEnabled || isScreenSharing"
+              [class]="getCameraSwitchButtonClass()"
+              [title]="getCameraSwitchTooltip()"
+            >
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
               </svg>
             </button>
 
@@ -161,7 +186,54 @@ import { Subscription } from 'rxjs';
         </div>
       </div> -->
     </div>
-  `
+  `,
+  styles: [`
+    .video-container {
+      border-radius: 12px;
+      overflow: hidden;
+      min-height: 300px;
+    }
+    
+    .video-element {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #1f2937;
+    }
+    
+    .control-btn {
+      @apply w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105;
+    }
+    
+    .control-btn:disabled {
+      @apply opacity-50 cursor-not-allowed;
+    }
+    
+    .control-btn:disabled:hover {
+      @apply scale-100;
+    }
+    
+    .chat-message {
+      @apply mb-4 p-3 rounded-lg max-w-xs;
+    }
+    
+    .chat-message.own {
+      @apply bg-blue-500 text-white ml-auto;
+    }
+    
+    .chat-message.other {
+      @apply bg-gray-100 text-gray-800;
+    }
+    
+    .fade-in {
+      animation: fadeIn 0.3s ease-in;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  `]
 })
 export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('localVideo') localVideoRef!: ElementRef<HTMLVideoElement>;
@@ -176,6 +248,7 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
   isVideoEnabled = true;
   isScreenSharing = false;
   isScreenShareSupported = false;
+  isCameraSwitchSupported = false;
   remoteUserConnected = false;
   
   messages: ChatMessage[] = [];
@@ -195,6 +268,9 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
   ngOnInit() {
     // Check if screen share is supported
     this.isScreenShareSupported = this.agoraService.isScreenShareSupported();
+    
+    // Check if camera switch is supported
+    this.isCameraSwitchSupported = this.agoraService.isCameraSwitchSupported();
 
     this.route.queryParams.subscribe(params => {
       this.username = params['username'] || '';
@@ -244,6 +320,9 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
       
       this.connectionStatus = 'Connected';
       
+      // Check camera switch support again after initialization
+      this.isCameraSwitchSupported = this.agoraService.isCameraSwitchSupported();
+      
     } catch (error) {
       console.error('Failed to initialize call:', error);
       this.connectionStatus = 'Connection failed';
@@ -292,6 +371,51 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
 
   async toggleCamera() {
     this.isVideoEnabled = await this.agoraService.toggleCamera();
+  }
+
+  // Switch camera between front and rear
+  async switchCamera() {
+    try {
+      const newVideoTrack = await this.agoraService.switchCamera();
+      if (newVideoTrack && this.localVideoRef) {
+        // Update the local video element with the new track
+        this.localVideoTrack = newVideoTrack;
+        newVideoTrack.play(this.localVideoRef.nativeElement);
+      }
+    } catch (error) {
+      console.error('Failed to switch camera:', error);
+      // You might want to show a user-friendly error message here
+    }
+  }
+
+  // Get current camera label for display
+  getCurrentCameraLabel(): string {
+    if (!this.isCameraSwitchSupported || this.isScreenSharing) {
+      return '';
+    }
+    
+    const facingMode = this.agoraService.getCurrentFacingMode();
+    return facingMode === 'user' ? '(Front Camera)' : '(Rear Camera)';
+  }
+
+  // Get camera switch button class
+  getCameraSwitchButtonClass(): string {
+    if (!this.isVideoEnabled || this.isScreenSharing) {
+      return 'control-btn bg-gray-400 text-gray-600 cursor-not-allowed';
+    }
+    return 'control-btn bg-gray-600 text-white hover:bg-gray-500';
+  }
+
+  // Get camera switch tooltip
+  getCameraSwitchTooltip(): string {
+    if (!this.isVideoEnabled) {
+      return 'Enable camera to switch';
+    }
+    if (this.isScreenSharing) {
+      return 'Stop screen sharing to switch camera';
+    }
+    const currentMode = this.agoraService.getCurrentFacingMode();
+    return currentMode === 'user' ? 'Switch to Rear Camera' : 'Switch to Front Camera';
   }
 
   async toggleScreenShare() {

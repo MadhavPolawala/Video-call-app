@@ -7,7 +7,8 @@ import AgoraRTC, {
   IRemoteVideoTrack,
   IRemoteAudioTrack,
   UID,
-  ScreenVideoTrackInitConfig
+  ScreenVideoTrackInitConfig,
+  CameraVideoTrackInitConfig
 } from 'agora-rtc-sdk-ng';
 import { BehaviorSubject } from 'rxjs';
 
@@ -20,6 +21,8 @@ export class AgoraService {
   private localAudioTrack: ILocalAudioTrack | null = null;
   private localScreenTrack: ILocalVideoTrack | any = null;
   private remoteUsers: any[] = [];
+  private currentFacingMode: 'user' | 'environment' = 'user'; // Track current camera
+  private availableCameras: MediaDeviceInfo[] = [];
   
   // Observable for remote users updates
   private remoteUsersSubject = new BehaviorSubject<any[]>([]);
@@ -31,6 +34,7 @@ export class AgoraService {
   constructor() {
     this.client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
     this.setupClientEvents();
+    this.getAvailableCameras();
   }
 
   private setupClientEvents() {
@@ -98,6 +102,27 @@ export class AgoraService {
     });
   }
 
+  // Get available cameras on the device
+  private async getAvailableCameras() {
+    try {
+      const devices = await AgoraRTC.getDevices();
+      this.availableCameras = devices.filter(device => device.kind === 'videoinput');
+      console.log('Available cameras:', this.availableCameras);
+    } catch (error) {
+      console.error('Failed to get available cameras:', error);
+    }
+  }
+
+  // Check if camera switching is supported (multiple cameras available)
+  public isCameraSwitchSupported(): boolean {
+    return this.availableCameras.length > 1;
+  }
+
+  // Get current facing mode
+  public getCurrentFacingMode(): 'user' | 'environment' {
+    return this.currentFacingMode;
+  }
+
   async joinChannel(channel: string, uid: UID, token?: string) {
     try {
       await this.client.join(this.APP_ID, channel, token || null, uid);
@@ -105,7 +130,7 @@ export class AgoraService {
       
       // Create local tracks
       this.localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-      this.localVideoTrack = await AgoraRTC.createCameraVideoTrack();
+      this.localVideoTrack = await this.createCameraVideoTrack();
       
       // Publish local tracks
       await this.client.publish([this.localAudioTrack, this.localVideoTrack]);
@@ -118,6 +143,71 @@ export class AgoraService {
     } catch (error) {
       console.error('Failed to join channel:', error);
       throw error;
+    }
+  }
+
+  // Create camera video track with specified facing mode
+  private async createCameraVideoTrack(): Promise<ILocalVideoTrack> {
+    const config: CameraVideoTrackInitConfig = {
+      facingMode: this.currentFacingMode,
+      encoderConfig: {
+        width: 640,
+        height: 480,
+        frameRate: 30,
+        bitrateMax: 1000,
+        bitrateMin: 300
+      }
+    };
+
+    try {
+      return await AgoraRTC.createCameraVideoTrack(config);
+    } catch (error) {
+      console.error('Failed to create camera track with facing mode, trying default:', error);
+      // Fallback to default camera if facing mode fails
+      return await AgoraRTC.createCameraVideoTrack();
+    }
+  }
+
+  // Switch between front and rear camera
+  async switchCamera(): Promise<ILocalVideoTrack | null> {
+    try {
+      if (!this.isCameraSwitchSupported()) {
+        console.warn('Camera switching not supported - only one camera available');
+        return null;
+      }
+
+      // Toggle facing mode
+      this.currentFacingMode = this.currentFacingMode === 'user' ? 'environment' : 'user';
+      
+      // Stop current video track
+      if (this.localVideoTrack) {
+        await this.client.unpublish(this.localVideoTrack);
+        this.localVideoTrack.stop();
+        this.localVideoTrack.close();
+      }
+
+      // Create new video track with switched camera
+      this.localVideoTrack = await this.createCameraVideoTrack();
+      
+      // Publish the new video track
+      await this.client.publish(this.localVideoTrack);
+      
+      console.log('Camera switched to:', this.currentFacingMode);
+      return this.localVideoTrack;
+      
+    } catch (error) {
+      console.error('Failed to switch camera:', error);
+      
+      // Try to restore previous camera on error
+      this.currentFacingMode = this.currentFacingMode === 'user' ? 'environment' : 'user';
+      try {
+        this.localVideoTrack = await this.createCameraVideoTrack();
+        await this.client.publish(this.localVideoTrack);
+      } catch (restoreError) {
+        console.error('Failed to restore camera:', restoreError);
+      }
+      
+      return null;
     }
   }
 

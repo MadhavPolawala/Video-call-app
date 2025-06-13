@@ -12,7 +12,8 @@ import { Subscription } from 'rxjs';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="min-h-screen bg-gray-900 flex">
+    <div class="h-screen bg-gray-900 flex">
+      <div class="fixed bottom-0 right-0 text-[10px] leading-[10px]">Designed by Madhav Polawala</div>
       <!-- Main Video Area -->
       <div class="flex-1 p-4 min-h-screen">
         <div class="h-full flex flex-col">
@@ -40,20 +41,9 @@ import { Subscription } from 'rxjs';
               </video>
               <div class="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-lg text-sm">
                 You {{ !isVideoEnabled ? '(Camera Off)' : '' }} {{ isScreenSharing ? '(Screen Sharing)' : '' }}
-                {{ getCurrentCameraLabel() }}
+                <!-- {{ getCurrentCameraLabel() }} -->
               </div>
-              <!-- Camera Switch Button (overlay on video) -->
-              <button
-                *ngIf="isCameraSwitchSupported && isVideoEnabled && !isScreenSharing"
-                (click)="switchCamera()"
-                class="absolute top-4 right-4 w-10 h-10 bg-black bg-opacity-50 hover:bg-opacity-70 text-white rounded-full flex items-center justify-center transition-all duration-200"
-                title="Switch Camera"
-              >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
-                </svg>
-              </button>
-            </div>
+              </div>
 
             <!-- Remote Video -->
             <div class="video-container bg-gray-800 relative">
@@ -86,12 +76,8 @@ import { Subscription } from 'rxjs';
               [class]="isMicEnabled ? 'control-btn bg-gray-600 text-white' : 'control-btn bg-red-500 text-white'"
               title="Toggle Microphone"
             >
-              <svg *ngIf="isMicEnabled" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
-              </svg>
-              <svg *ngIf="!isMicEnabled" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-3a1 1 0 011-1h1m0 0V9a2 2 0 012-2h2m0 0V6a2 2 0 012-2h2a2 2 0 012 2v1m2 5v3a1 1 0 01-1 1h-1.586l-2.707-2.707A1 1 0 0012 12h-1a3 3 0 01-3-3V8a1 1 0 011-1h1m0 0V6a2 2 0 012-2h1a2 2 0 012 2v1m0 0h3"></path>
-              </svg>
+              <svg *ngIf="isMicEnabled"  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-microphone"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 2m0 3a3 3 0 0 1 3 -3h0a3 3 0 0 1 3 3v5a3 3 0 0 1 -3 3h0a3 3 0 0 1 -3 -3z" /><path d="M5 10a7 7 0 0 0 14 0" /><path d="M8 21l8 0" /><path d="M12 17l0 4" /></svg>
+              <svg  *ngIf="!isMicEnabled"  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-microphone-off"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 3l18 18" /><path d="M9 5a3 3 0 0 1 6 0v5a3 3 0 0 1 -.13 .874m-2 2a3 3 0 0 1 -3.87 -2.872v-1" /><path d="M5 10a7 7 0 0 0 10.846 5.85m2 -2a6.967 6.967 0 0 0 1.152 -3.85" /><path d="M8 21l8 0" /><path d="M12 17l0 4" /></svg>
             </button>
 
             <button
@@ -99,12 +85,28 @@ import { Subscription } from 'rxjs';
               [class]="isVideoEnabled ? 'control-btn bg-gray-600 text-white' : 'control-btn bg-red-500 text-white'"
               title="Toggle Camera"
             >
-              <svg *ngIf="isVideoEnabled" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
-              </svg>
-              <svg *ngIf="!isVideoEnabled" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg *ngIf="isVideoEnabled" xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-video"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 10l4.553 -2.276a1 1 0 0 1 1.447 .894v6.764a1 1 0 0 1 -1.447 .894l-4.553 -2.276v-4z" /><path d="M3 6m0 2a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2z" /></svg>
+              <!-- <svg  class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18 17.75M6 17.25l2.364-2.364m8 0L18 17.25M6 17.25v-1.5M18 17.25v-1.5m0 0V15M6 15.75v-1.5m12 1.5v-1.5m0 0V13.5M6 14.25v-1.5"></path>
-              </svg>
+              </svg> -->
+              <svg *ngIf="!isVideoEnabled" xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-video-off"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 3l18 18" /><path d="M15 11v-1l4.553 -2.276a1 1 0 0 1 1.447 .894v6.764a1 1 0 0 1 -.675 .946" /><path d="M10 6h3a2 2 0 0 1 2 2v3m0 4v1a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2v-8a2 2 0 0 1 2 -2h1" /></svg>
+            </button>
+
+            <button
+              (click)="endCall()"
+              class="control-btn bg-red-500 text-white"
+              title="End Call"
+            >
+              <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-phone"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2" /></svg>
+            </button>
+
+            <button
+              (click)="toggleScreenShare()"
+              [disabled]="!isScreenShareSupported"
+              [class]="getScreenShareButtonClass()"
+              [title]="getScreenShareTooltip()"
+            >
+              <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-screen-share"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M21 12v3a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1v-10a1 1 0 0 1 1 -1h9" /><path d="M7 20l10 0" /><path d="M9 16l0 4" /><path d="M15 16l0 4" /><path d="M17 4h4v4" /><path d="M16 9l5 -5" /></svg>
             </button>
 
             <!-- Camera Switch Button (in controls) -->
@@ -115,31 +117,9 @@ import { Subscription } from 'rxjs';
               [class]="getCameraSwitchButtonClass()"
               [title]="getCameraSwitchTooltip()"
             >
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-              </svg>
+              <svg  xmlns="http://www.w3.org/2000/svg"  width="24"  height="24"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-camera-rotate"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 7h1a2 2 0 0 0 2 -2a1 1 0 0 1 1 -1h6a1 1 0 0 1 1 1a2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2" /><path d="M11.245 15.904a3 3 0 0 0 3.755 -2.904m-2.25 -2.905a3 3 0 0 0 -3.75 2.905" /><path d="M14 13h2v2" /><path d="M10 13h-2v-2" /></svg>
             </button>
-
-            <button
-              (click)="toggleScreenShare()"
-              [disabled]="!isScreenShareSupported"
-              [class]="getScreenShareButtonClass()"
-              [title]="getScreenShareTooltip()"
-            >
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-              </svg>
-            </button>
-
-            <button
-              (click)="endCall()"
-              class="control-btn bg-red-500 text-white"
-              title="End Call"
-            >
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 7v10a2 2 0 002 2h4l3-3h5a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2z"></path>
-              </svg>
-            </button>
+            
           </div>
         </div>
       </div>
@@ -415,7 +395,7 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
       return 'Stop screen sharing to switch camera';
     }
     const currentMode = this.agoraService.getCurrentFacingMode();
-    return currentMode === 'user' ? 'Switch to Rear Camera' : 'Switch to Front Camera';
+    return currentMode === "user" ? "Switch camera" : "Switch camera";
   }
 
   async toggleScreenShare() {

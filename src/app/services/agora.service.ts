@@ -7,7 +7,8 @@ import AgoraRTC, {
   IRemoteVideoTrack,
   IRemoteAudioTrack,
   UID,
-  ScreenVideoTrackInitConfig
+  ScreenVideoTrackInitConfig,
+  CameraVideoTrackInitConfig
 } from 'agora-rtc-sdk-ng';
 import { BehaviorSubject } from 'rxjs';
 
@@ -172,35 +173,184 @@ export class AgoraService {
     return false;
   }
 
-  // Check if screen share is supported (not on mobile)
+  // Device detection methods
+  private isMobile(): boolean {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  }
+
+  private isAndroid(): boolean {
+    return /Android/i.test(navigator.userAgent);
+  }
+
+  private isIOS(): boolean {
+    return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+  }
+
+  // Check if screen share is supported (updated logic)
   isScreenShareSupported(): boolean {
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    return !isMobile && 'getDisplayMedia' in navigator.mediaDevices;
+    // Desktop browsers - use native getDisplayMedia
+    if (!this.isMobile() && 'getDisplayMedia' in navigator.mediaDevices) {
+      return true;
+    }
+    
+    // Mobile browsers - always return true as we'll handle it differently
+    if (this.isMobile()) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  // Get screen share capability info
+  getScreenShareCapability(): { supported: boolean; method: string; requiresPermission: boolean } {
+    if (!this.isMobile() && 'getDisplayMedia' in navigator.mediaDevices) {
+      return { supported: true, method: 'native', requiresPermission: true };
+    }
+    
+    if (this.isMobile()) {
+      return { supported: true, method: 'mobile-alternative', requiresPermission: true };
+    }
+    
+    return { supported: false, method: 'none', requiresPermission: false };
   }
 
   async startScreenShare(): Promise<ILocalVideoTrack | null> {
     try {
-      // Check if screen share is supported
-      if (!this.isScreenShareSupported()) {
+      const capability = this.getScreenShareCapability();
+      
+      if (!capability.supported) {
         throw new Error('Screen sharing is not supported on this device');
       }
 
+      // Unpublish current video track
       if (this.localVideoTrack) {
         await this.client.unpublish(this.localVideoTrack);
       }
 
-      // Fixed: Added required config parameter
-      const screenConfig: ScreenVideoTrackInitConfig = {
-        encoderConfig: '1080p_1', // Adjust based on your needs
-        optimizationMode: 'detail' // 'detail' or 'motion'
-      };
-      
-      this.localScreenTrack = await AgoraRTC.createScreenVideoTrack(screenConfig);
-      await this.client.publish(this.localScreenTrack);
-      
-      return this.localScreenTrack;
+      let screenTrack: ILocalVideoTrack | any = null;
+
+      if (capability.method === 'native') {
+        // Desktop: Use native screen sharing
+        screenTrack = await this.startDesktopScreenShare();
+      } else if (capability.method === 'mobile-alternative') {
+        // Mobile: Use alternative approaches
+        screenTrack = await this.startMobileScreenShare();
+      }
+
+      if (screenTrack) {
+        this.localScreenTrack = screenTrack;
+        await this.client.publish(screenTrack);
+        return screenTrack;
+      } else {
+        // If screen share fails, republish camera
+        if (this.localVideoTrack) {
+          await this.client.publish(this.localVideoTrack);
+        }
+        return null;
+      }
     } catch (error) {
       console.error('Failed to start screen share:', error);
+      
+      // If screen share fails, republish camera
+      if (this.localVideoTrack) {
+        try {
+          await this.client.publish(this.localVideoTrack);
+        } catch (republishError) {
+          console.error('Failed to republish camera:', republishError);
+        }
+      }
+      
+      return null;
+    }
+  }
+
+  private async startDesktopScreenShare(): Promise<ILocalVideoTrack | any> {
+    const screenConfig: ScreenVideoTrackInitConfig = {
+      encoderConfig: '1080p_1',
+      optimizationMode: 'detail'
+    };
+    
+    return await AgoraRTC.createScreenVideoTrack(screenConfig);
+  }
+
+  private async startMobileScreenShare(): Promise<ILocalVideoTrack | any> {
+    try {
+      // Method 1: Try native getDisplayMedia first (some mobile browsers support it)
+      if ('getDisplayMedia' in navigator.mediaDevices) {
+        try {
+          const screenConfig: ScreenVideoTrackInitConfig = {
+            encoderConfig: '720p_1', // Lower resolution for mobile
+            optimizationMode: 'motion'
+          };
+          
+          const screenTrack = await AgoraRTC.createScreenVideoTrack(screenConfig);
+          console.log('Mobile screen share successful with native method');
+          return screenTrack;
+        } catch (nativeError) {
+          console.log('Native mobile screen share failed, trying alternatives:', nativeError);
+        }
+      }
+
+      // Method 2: Use camera with rear camera for mobile screen recording simulation
+      if (this.isMobile()) {
+        try {
+          // Try to get rear camera which can be used to show screen content
+          const cameraConfig = {
+            encoderConfig: '720p_1',
+            facingMode: 'environment' // Use rear camera
+          };
+          
+          const cameraTrack = await AgoraRTC.createCameraVideoTrack(cameraConfig as CameraVideoTrackInitConfig);
+          console.log('Using rear camera as screen share alternative');
+          return cameraTrack;
+        } catch (cameraError) {
+          console.log('Rear camera method failed:', cameraError);
+        }
+      }
+
+      // Method 3: Manual media stream creation for advanced cases
+      if (this.isAndroid()) {
+        return await this.tryAndroidScreenShare();
+      }
+
+      throw new Error('No suitable mobile screen sharing method available');
+    } catch (error) {
+      console.error('All mobile screen share methods failed:', error);
+      return null;
+    }
+  }
+
+  private async tryAndroidScreenShare(): Promise<ILocalVideoTrack | null> {
+    try {
+      // For Android, we can try to use MediaRecorder API or Canvas-based approaches
+      // This is a fallback method that captures the current viewport
+      
+      // Check if we can access screen capture API (Android Chrome 72+)
+      if ((navigator as any).mediaDevices && (navigator as any).mediaDevices.getDisplayMedia) {
+        const stream = await (navigator as any).mediaDevices.getDisplayMedia({
+          video: {
+            width: { ideal: 1280, max: 1920 },
+            height: { ideal: 720, max: 1080 },
+            frameRate: { ideal: 30, max: 60 }
+          }
+        });
+        
+        // Create custom track from the stream
+        const videoTrack = stream.getVideoTracks()[0];
+        if (videoTrack) {
+          // Convert to Agora track
+          const customTrack = AgoraRTC.createCustomVideoTrack({
+            mediaStreamTrack: videoTrack,
+            // encoderConfig: '720p_1'
+          });
+          
+          return customTrack;
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Android screen share failed:', error);
       return null;
     }
   }
@@ -221,6 +371,21 @@ export class AgoraService {
       console.error('Failed to stop screen share:', error);
       throw error;
     }
+  }
+
+  // Method to show mobile screen sharing instructions
+  getMobileScreenShareInstructions(): string {
+    if (this.isIOS()) {
+      return 'For iOS: Screen recording will use the rear camera. Point your device at the screen you want to share, or use Control Center screen recording if supported by your browser.';
+    } else if (this.isAndroid()) {
+      return 'For Android: Your browser may prompt for screen recording permission. If not available, the rear camera will be used as an alternative.';
+    }
+    return 'Mobile screen sharing will attempt multiple methods. Follow any browser prompts for permissions.';
+  }
+
+  // Check if user needs special instructions
+  needsMobileInstructions(): boolean {
+    return this.isMobile();
   }
 
   getRemoteUsers() {

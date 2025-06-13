@@ -13,7 +13,7 @@ import { Subscription } from 'rxjs';
   imports: [CommonModule, FormsModule],
   template: `
     <div class="h-screen bg-gray-900 flex">
-      <div class="fixed bottom-0 right-0 text-[10px] leading-[10px]">Designed by Madhav Polawala</div>
+      <div class="fixed bottom-0.5 right-0.5 text-[10px] leading-[10px] font-mono text-blue-400/5">Polawala</div>
       <!-- Main Video Area -->
       <div class="flex-1 p-4 min-h-screen">
         <div class="h-full flex flex-col">

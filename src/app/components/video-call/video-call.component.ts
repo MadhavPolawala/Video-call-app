@@ -29,7 +29,7 @@ import { Subscription } from 'rxjs';
           </div>
 
           <!-- Video Grid -->
-          <div class="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 h-[calc(100%-150px)]">
+          <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 h-[calc(100%-150px)]">
             <!-- Local Video -->
             <div class="video-container bg-gray-800 relative">
               <video 
@@ -173,6 +173,7 @@ import { Subscription } from 'rxjs';
       overflow: hidden;
       min-height: 300px;
     }
+
     
     .video-element {
       width: 100%;
@@ -209,11 +210,17 @@ import { Subscription } from 'rxjs';
       animation: fadeIn 0.3s ease-in;
     }
     
+    @media(max-width: 768px) {
+      .video-container {
+        max-height: 300px;
+      }
+    }
+    
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
     }
-  `]
+    `]
 })
 export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('localVideo') localVideoRef!: ElementRef<HTMLVideoElement>;

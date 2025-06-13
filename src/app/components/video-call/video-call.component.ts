@@ -28,7 +28,7 @@ import { Subscription } from 'rxjs';
           </div>
 
           <!-- Mobile Screen Share Instructions (if needed) -->
-          <!-- <div *ngIf="showMobileInstructions" 
+          <div *ngIf="showMobileInstructions" 
                class="mb-4 p-3 bg-blue-900 border border-blue-700 rounded-lg">
             <div class="flex items-start space-x-2">
               <svg class="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -45,7 +45,7 @@ import { Subscription } from 'rxjs';
                 </svg>
               </button>
             </div>
-          </div> -->
+          </div>
 
           <!-- Video Grid -->
           <div class="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 h-[calc(100%-150px)]">
@@ -122,20 +122,7 @@ import { Subscription } from 'rxjs';
               </svg>
             </button>
 
-           <button
-              *ngIf="isMobileDevice"
-              (click)="switchCamera()"
-              class="control-btn bg-gray-600 text-white"
-              title="Switch Camera"
-            >
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
-              </svg>
-            </button>
-
             <button
-              *ngIf="!isMobileDevice && isScreenShareSupported"
               (click)="toggleScreenShare()"
               [disabled]="isScreenShareLoading"
               [class]="getScreenShareButtonClass()"
@@ -218,8 +205,7 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
   isScreenShareSupported = false;
   isScreenShareLoading = false;
   remoteUserConnected = false;
-  isMobileDevice = false;
-
+  
   // Mobile screen share support
   showMobileInstructions = false;
   mobileInstructions = '';
@@ -240,8 +226,6 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnInit() {
     // Check if screen share is supported
-    this.isMobileDevice = this.agoraService.isMobile();
-
     this.isScreenShareSupported = this.agoraService.isScreenShareSupported();
     
     // Show mobile instructions if needed
@@ -283,26 +267,6 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
       this.remoteUsersSubscription.unsubscribe();
     }
   }
-
-  async switchCamera() {
-    try {
-      const success = await this.agoraService.switchCamera();
-      if (success) {
-        // Update the local video element with the new track
-        const tracks = this.agoraService.getLocalTracks();
-        if (tracks.videoTrack && this.localVideoRef) {
-          tracks.videoTrack.play(this.localVideoRef.nativeElement);
-        }
-        this.showTemporaryMessage('Camera switched', 'success');
-      } else {
-        this.showTemporaryMessage('Only one camera available', 'error');
-      }
-    } catch (error) {
-      console.error('Camera switch error:', error);
-      this.showTemporaryMessage('Failed to switch camera', 'error');
-    }
-  }
-
 
   private async initializeCall() {
     try {
@@ -428,13 +392,22 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
       : 'control-btn bg-gray-600 text-white';
   }
 
- getScreenShareTooltip(): string {
-  if (this.isScreenShareLoading) {
-    return 'Starting screen share...';
+  getScreenShareTooltip(): string {
+    if (this.isScreenShareLoading) {
+      return 'Starting screen share...';
+    }
+    
+    if (!this.isScreenShareSupported) {
+      return 'Screen sharing not supported on this device';
+    }
+    
+    if (this.agoraService.needsMobileInstructions()) {
+      return this.isScreenSharing ? 'Stop Screen Share' : 'Start Screen Share (Mobile)';
+    }
+    
+    return this.isScreenSharing ? 'Stop Screen Share' : 'Start Screen Share';
   }
-  
-  return this.isScreenSharing ? 'Stop Screen Share' : 'Start Screen Share';
-}
+
   dismissMobileInstructions() {
     this.showMobileInstructions = false;
   }

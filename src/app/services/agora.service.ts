@@ -174,7 +174,7 @@ export class AgoraService {
   }
 
   // Device detection methods
-  isMobile(): boolean {
+  private isMobile(): boolean {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   }
 
@@ -187,52 +187,19 @@ export class AgoraService {
   }
 
   // Check if screen share is supported (updated logic)
- isScreenShareSupported(): boolean {
-    // Only support screen sharing on desktop
-    return !this.isMobile() && 'getDisplayMedia' in navigator.mediaDevices;
-  }
-
-  async switchCamera(): Promise<boolean> {
-    if (!this.localVideoTrack || !this.isMobile()) {
-      return false;
-    }
-
-    try {
-      // Get available devices
-      const devices = await AgoraRTC.getCameras();
-      if (devices.length < 2) {
-        return false; // Only one camera available
-      }
-
-      // Get current device ID
-      const currentDeviceId = this.localVideoTrack.getTrackLabel();
-      
-      // Find the other camera
-      const otherCamera = devices.find(device => device.deviceId !== currentDeviceId);
-      if (!otherCamera) {
-        return false;
-      }
-
-      // Create new track with the other camera
-      const newTrack = await AgoraRTC.createCameraVideoTrack({
-        cameraId: otherCamera.deviceId
-      });
-
-      // Replace the old track
-      await this.client.unpublish(this.localVideoTrack);
-      this.localVideoTrack.stop();
-      this.localVideoTrack.close();
-      
-      this.localVideoTrack = newTrack;
-      await this.client.publish(this.localVideoTrack);
-      
+  isScreenShareSupported(): boolean {
+    // Desktop browsers - use native getDisplayMedia
+    if (!this.isMobile() && 'getDisplayMedia' in navigator.mediaDevices) {
       return true;
-    } catch (error) {
-      console.error('Failed to switch camera:', error);
-      return false;
     }
+    
+    // Mobile browsers - always return true as we'll handle it differently
+    if (this.isMobile()) {
+      return true;
+    }
+    
+    return false;
   }
-
 
   // Get screen share capability info
   getScreenShareCapability(): { supported: boolean; method: string; requiresPermission: boolean } {

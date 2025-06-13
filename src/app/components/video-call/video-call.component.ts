@@ -27,26 +27,6 @@ import { Subscription } from 'rxjs';
             </div>
           </div>
 
-          <!-- Mobile Screen Share Instructions (if needed) -->
-          <div *ngIf="showMobileInstructions" 
-               class="mb-4 p-3 bg-blue-900 border border-blue-700 rounded-lg">
-            <div class="flex items-start space-x-2">
-              <svg class="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-              </svg>
-              <div>
-                <p class="text-blue-200 text-sm font-medium">Mobile Screen Sharing</p>
-                <p class="text-blue-300 text-xs mt-1">{{ mobileInstructions }}</p>
-              </div>
-              <button (click)="dismissMobileInstructions()" 
-                      class="text-blue-400 hover:text-blue-300 ml-auto">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                </svg>
-              </button>
-            </div>
-          </div>
-
           <!-- Video Grid -->
           <div class="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 h-[calc(100%-150px)]">
             <!-- Local Video -->
@@ -60,13 +40,6 @@ import { Subscription } from 'rxjs';
               </video>
               <div class="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-lg text-sm">
                 You {{ !isVideoEnabled ? '(Camera Off)' : '' }} {{ isScreenSharing ? '(Screen Sharing)' : '' }}
-              </div>
-              
-              <!-- Screen sharing status indicator -->
-              <div *ngIf="isScreenSharing" 
-                   class="absolute top-4 left-4 bg-red-500 text-white px-2 py-1 rounded text-xs flex items-center space-x-1">
-                <div class="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                <span>SHARING</span>
               </div>
             </div>
 
@@ -124,15 +97,12 @@ import { Subscription } from 'rxjs';
 
             <button
               (click)="toggleScreenShare()"
-              [disabled]="isScreenShareLoading"
+              [disabled]="!isScreenShareSupported"
               [class]="getScreenShareButtonClass()"
               [title]="getScreenShareTooltip()"
             >
-              <svg *ngIf="!isScreenShareLoading" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
-              </svg>
-              <svg *ngIf="isScreenShareLoading" class="w-6 h-6 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
               </svg>
             </button>
 
@@ -149,46 +119,49 @@ import { Subscription } from 'rxjs';
         </div>
       </div>
 
-      
+      <!-- Chat Sidebar -->
+      <!-- <div class="w-80 bg-white border-l border-gray-200 flex flex-col">
+        <div class="p-4 border-b border-gray-200">
+          <h2 class="text-lg font-semibold text-gray-800">Chat</h2>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-4" #chatContainer>
+          <div *ngFor="let message of messages" 
+               [class]="'chat-message fade-in ' + (message.isOwn ? 'own' : 'other')">
+            <div class="text-xs text-gray-500 mb-1">
+              {{ message.username }} • {{ message.timestamp | date:'short' }}
+            </div>
+            <div>{{ message.message }}</div>
+          </div>
+          <div *ngIf="messages.length === 0" class="text-center text-gray-500 mt-8">
+            <p>No messages yet</p>
+            <p class="text-sm">Start a conversation...</p>
+          </div>
+        </div>
+
+        <div class="p-4 border-t border-gray-200">
+          <form (ngSubmit)="sendMessage()" class="flex space-x-2">
+            <input
+              type="text"
+              [(ngModel)]="currentMessage"
+              name="message"
+              placeholder="Type a message..."
+              class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+            <button
+              type="submit"
+              [disabled]="!currentMessage.trim()"
+              class="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white rounded-lg transition-colors duration-200"
+            >
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+              </svg>
+            </button>
+          </form>
+        </div>
+      </div> -->
     </div>
-  `,
-  styles: [`
-    .video-container {
-      border-radius: 12px;
-      overflow: hidden;
-      position: relative;
-    }
-    
-    .video-element {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      background: #1f2937;
-    }
-    
-    .control-btn {
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      border: none;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    }
-    
-    .control-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
-    }
-    
-    .control-btn:disabled {
-      cursor: not-allowed;
-      transform: none;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    }`]
+  `
 })
 export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('localVideo') localVideoRef!: ElementRef<HTMLVideoElement>;
@@ -203,12 +176,7 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
   isVideoEnabled = true;
   isScreenSharing = false;
   isScreenShareSupported = false;
-  isScreenShareLoading = false;
   remoteUserConnected = false;
-  
-  // Mobile screen share support
-  showMobileInstructions = false;
-  mobileInstructions = '';
   
   messages: ChatMessage[] = [];
   currentMessage = '';
@@ -227,12 +195,6 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
   ngOnInit() {
     // Check if screen share is supported
     this.isScreenShareSupported = this.agoraService.isScreenShareSupported();
-    
-    // Show mobile instructions if needed
-    if (this.agoraService.needsMobileInstructions()) {
-      this.mobileInstructions = this.agoraService.getMobileScreenShareInstructions();
-      this.showMobileInstructions = true;
-    }
 
     this.route.queryParams.subscribe(params => {
       this.username = params['username'] || '';
@@ -333,111 +295,46 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   async toggleScreenShare() {
-    if (this.isScreenShareLoading) return;
-    
-    this.isScreenShareLoading = true;
+    if (!this.isScreenShareSupported) {
+      alert('Screen sharing is not supported on this device');
+      return;
+    }
 
-    try {
-      if (this.isScreenSharing) {
-        await this.agoraService.stopScreenShare();
-        this.isScreenSharing = false;
-        
-        // Restore camera video
-        if (this.localVideoTrack && this.localVideoRef) {
-          this.localVideoTrack.play(this.localVideoRef.nativeElement);
+    if (this.isScreenSharing) {
+      await this.agoraService.stopScreenShare();
+      this.isScreenSharing = false;
+      
+      // Restore camera video
+      if (this.localVideoTrack && this.localVideoRef) {
+        this.localVideoTrack.play(this.localVideoRef.nativeElement);
+      }
+    } else {
+      const screenTrack = await this.agoraService.startScreenShare();
+      if (screenTrack) {
+        this.isScreenSharing = true;
+        if (this.localVideoRef) {
+          screenTrack.play(this.localVideoRef.nativeElement);
         }
       } else {
-        const screenTrack = await this.agoraService.startScreenShare();
-        if (screenTrack) {
-          this.isScreenSharing = true;
-          if (this.localVideoRef) {
-            screenTrack.play(this.localVideoRef.nativeElement);
-          }
-          
-          // Show success message for mobile users
-          if (this.agoraService.needsMobileInstructions()) {
-            this.showTemporaryMessage('Screen sharing started successfully!', 'success');
-          }
-        } else {
-          // Show appropriate error message
-          const capability = this.agoraService.getScreenShareCapability();
-          let errorMessage = 'Failed to start screen sharing.';
-          
-          if (capability.method === 'mobile-alternative') {
-            errorMessage = 'Screen sharing failed. Please ensure you grant the necessary permissions when prompted.';
-          }
-          
-          this.showTemporaryMessage(errorMessage, 'error');
-        }
+        alert('Failed to start screen sharing. Please try again.');
       }
-    } catch (error) {
-      console.error('Screen share toggle error:', error);
-      this.showTemporaryMessage('Screen sharing is not available on this device.', 'error');
-    } finally {
-      this.isScreenShareLoading = false;
     }
   }
 
   getScreenShareButtonClass(): string {
-    if (this.isScreenShareLoading) {
-      return 'control-btn bg-yellow-500 text-white';
-    }
-    
     if (!this.isScreenShareSupported) {
       return 'control-btn bg-gray-400 text-gray-600 cursor-not-allowed';
     }
-    
     return this.isScreenSharing 
       ? 'control-btn bg-blue-500 text-white' 
       : 'control-btn bg-gray-600 text-white';
   }
 
   getScreenShareTooltip(): string {
-    if (this.isScreenShareLoading) {
-      return 'Starting screen share...';
-    }
-    
     if (!this.isScreenShareSupported) {
       return 'Screen sharing not supported on this device';
     }
-    
-    if (this.agoraService.needsMobileInstructions()) {
-      return this.isScreenSharing ? 'Stop Screen Share' : 'Start Screen Share (Mobile)';
-    }
-    
     return this.isScreenSharing ? 'Stop Screen Share' : 'Start Screen Share';
-  }
-
-  dismissMobileInstructions() {
-    this.showMobileInstructions = false;
-  }
-
-  private showTemporaryMessage(message: string, type: 'success' | 'error') {
-    // Create a temporary toast-like notification
-    const notification = document.createElement('div');
-    notification.className = `fixed top-4 right-4 z-50 px-4 py-2 rounded-lg text-white text-sm max-w-sm ${
-      type === 'success' ? 'bg-green-600' : 'bg-red-600'
-    }`;
-    notification.textContent = message;
-    
-    document.body.appendChild(notification);
-    
-    // Animate in
-    setTimeout(() => {
-      notification.style.opacity = '1';
-      notification.style.transform = 'translateY(0)';
-    }, 100);
-    
-    // Remove after 5 seconds
-    setTimeout(() => {
-      notification.style.opacity = '0';
-      notification.style.transform = 'translateY(-100%)';
-      setTimeout(() => {
-        if (notification.parentNode) {
-          notification.parentNode.removeChild(notification);
-        }
-      }, 300);
-    }, 5000);
   }
 
   async endCall() {

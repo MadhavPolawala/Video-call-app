@@ -32,7 +32,7 @@ import { ChatService } from '../../services/chat.service';
               [(ngModel)]="username"
               name="username"
               required
-              class="outline-none w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-300 focus:border-blue-500 transition-all duration-300"
+              class="outline-none w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-400/15 focus:border-blue-500 transition-all duration-300"
               placeholder="Enter your username"
             >
           </div>
@@ -47,7 +47,7 @@ import { ChatService } from '../../services/chat.service';
               [(ngModel)]="channelName"
               name="channelName"
               required
-              class="outline-none w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-300 focus:border-blue-500 transition-all duration-300"
+              class="outline-none w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-4 focus:ring-blue-400/15 focus:border-blue-500 transition-all duration-300"
               placeholder="Enter channel name"
             >
           </div>

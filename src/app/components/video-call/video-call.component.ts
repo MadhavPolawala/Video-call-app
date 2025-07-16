@@ -18,15 +18,25 @@ import { Subscription } from 'rxjs';
       <div class="flex-1 p-4 min-h-screen">
         <div class="h-full flex flex-col">
           <!-- Header -->
-          <div class="flex justify-between items-center mb-6">
-            <div>
-              <h1 class="text-2xl font-bold text-white">{{ channelName }}</h1>
-              <p class="text-gray-400">{{ username }}</p>
-            </div>
-            <div class="text-white">
-              <span class="text-sm">{{ connectionStatus }}</span>
-            </div>
-          </div>
+          <div class="flex flex-col md:flex-row md:justify-between md:items-center mb-6">
+  <!-- Left: Channel name and username -->
+  <div class="mb-2 md:mb-0">
+    <h1 class="text-2xl font-bold text-white">{{ channelName }}</h1>
+    <p class="text-gray-400">{{ username }}</p>
+  </div>
+
+  <!-- Right: Status + Invite button -->
+  <div class="flex items-center space-x-4">
+    <span class="text-sm text-white">{{ connectionStatus }}</span>
+    <button 
+      (click)="shareInvite()" 
+      class="text-sm text-blue-400 underline hover:text-blue-300 transition"
+    >
+      Invite
+    </button>
+  </div>
+</div>
+
 
           <!-- Video Grid -->
           <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 md:max-h-[calc(100vh-184px)] max-h-fit">

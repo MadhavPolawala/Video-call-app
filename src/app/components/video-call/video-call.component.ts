@@ -29,7 +29,7 @@ import { Subscription } from 'rxjs';
           </div>
 
           <!-- Video Grid -->
-          <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 h-[calc(100%-184px)]">
+          <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 md:h-[calc(100vh-184px)]">
             <!-- Local Video -->
             <div class="video-container bg-gray-800 relative">
               <video 

@@ -326,6 +326,22 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  shareInvite() {
+  const shareUrl = window.location.href;
+  const text = `Join my video call: ${shareUrl}`;
+  if (navigator.share) {
+    navigator.share({
+      title: 'Video Call',
+      text: text,
+      url: shareUrl
+    }).catch(err => console.log('Share failed:', err));
+  } else {
+    navigator.clipboard.writeText(shareUrl);
+    alert('Link copied! You can share it on WhatsApp or anywhere else.');
+  }
+}
+
+
   private updateRemoteVideo(remoteUsers: any[]) {
     if (remoteUsers.length > 0) {
       this.remoteUserConnected = true;

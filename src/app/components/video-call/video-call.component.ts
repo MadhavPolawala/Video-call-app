@@ -327,8 +327,12 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   shareInvite() {
-  const shareUrl = window.location.href;
+  const currentUrl = new URL(window.location.href);
+  currentUrl.searchParams.set('username', 'Guest'); // Replace username with 'Guest'
+  const shareUrl = currentUrl.toString();
+
   const text = `Join my video call: ${shareUrl}`;
+
   if (navigator.share) {
     navigator.share({
       title: 'Video Call',

@@ -32,7 +32,7 @@ import { Subscription } from "rxjs";
       </div>
 
       <!-- Main Video Area -->
-      <div class="flex-1 p-4 min-h-screen" [class.pr-[340px]]="isChatOpen">
+      <div class="flex-1 p-4 min-h-screen" [class.lg:pr-[340px]]="isChatOpen">
         <div class="h-full flex flex-col">
           <!-- Header -->
           <div

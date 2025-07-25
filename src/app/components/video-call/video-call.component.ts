@@ -10,7 +10,12 @@ import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
 import { ActivatedRoute, Router } from "@angular/router";
 import { AgoraService } from "../../services/agora.service";
-import { ChatService, ChatMessage } from "../../services/chat.service";
+import {
+  ChatService,
+  ChatMessage,
+  RoomUser,
+  TypingUser,
+} from "../../services/chat.service";
 import { ILocalVideoTrack, ILocalAudioTrack } from "agora-rtc-sdk-ng";
 import { Subscription } from "rxjs";
 
@@ -21,12 +26,13 @@ import { Subscription } from "rxjs";
   template: `
     <div class="min-h-screen bg-gray-900 flex">
       <div
-        class="fixed bottom-0.5 right-0.5 text-[10px] leading-[10px] font-mono text-blue-400/5"
+        class="fixed bottom-0.5 right-0.5 pr- text-[10px] leading-[10px] font-mono text-blue-400/5"
       >
         Polawala
       </div>
+
       <!-- Main Video Area -->
-      <div class="flex-1 p-4 min-h-screen">
+      <div class="flex-1 p-4 min-h-screen" [class.pr-[340px]]="isChatOpen">
         <div class="h-full flex flex-col">
           <!-- Header -->
           <div
@@ -40,34 +46,77 @@ import { Subscription } from "rxjs";
                 {{ channelName }}
               </h1>
               <p class="text-gray-300 text-sm">{{ username }}</p>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="text-xs text-gray-400"
+                  >{{ userCount }} participant(s)</span
+                >
+                <span
+                  *ngIf="connectionStatus === 'Connected'"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 text-xs"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="8"
+                    height="8"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    class="icon icon-tabler icons-tabler-filled icon-tabler-point"
+                  >
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                    <path
+                      d="M12 7a5 5 0 1 1 -4.995 5.217l-.005 -.217l.005 -.217a5 5 0 0 1 4.995 -4.783z"
+                    />
+                  </svg>
+                  {{ connectionStatus }}
+                </span>
+              </div>
             </div>
 
-            <!-- Right: Status + Invite button -->
+            <!-- Right: Controls -->
             <div
-              class="flex flex-col xs:flex-row md:flex-row items-end xs:items-center md:items-center gap-2 md:gap-3 md:mt-0"
+              class="flex flex-col xs:flex-row md:flex-row items-end xs:items-center md:items-center gap-2 md:gap-3"
             >
-              <span
-                class="inline-flex  items-center gap-1 md:px-4 px-2 md:py-1 py-0.5 rounded-full bg-green-500/10 text-green-400"
+              <!-- Chat Toggle Button -->
+              <button
+                (click)="toggleChat()"
+                class="inline-flex items-center gap-1 md:gap-2 md:px-4 px-2 md:py-2 py-1 rounded-full transition duration-200 ease-out relative"
+                [class]="
+                  isChatOpen
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-600 hover:bg-gray-500 text-white'
+                "
+                title="Toggle Chat"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
+                  width="18"
+                  height="18"
                   viewBox="0 0 24 24"
-                  fill="currentColor"
-                  class="icon icon-tabler icons-tabler-filled icon-tabler-point"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  class="icon icon-tabler icons-tabler-outline icon-tabler-message-circle max-md:max-w-3 max-md:max-h-3"
                 >
                   <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                  <path
-                    d="M12 7a5 5 0 1 1 -4.995 5.217l-.005 -.217l.005 -.217a5 5 0 0 1 4.995 -4.783z"
-                  />
+                  <path d="M3 20l1.3 -3.9a9 8 0 1 1 3.4 2.9l-4.7 1" />
                 </svg>
                 <span
-                  class="md:text-[14px] md:leading-[20px] text-[11px] leading-[11px]"
+                  class="md:text-[14px] md:leading-[14px] text-[11px] leading-[11px]"
                 >
-                  {{ connectionStatus }}</span
+                  Chat
+                </span>
+                <!-- Unread message indicator -->
+                <span
+                  *ngIf="unreadMessageCount > 0 && !isChatOpen"
+                  class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center min-w-5"
                 >
-              </span>
+                  {{ unreadMessageCount > 99 ? "99+" : unreadMessageCount }}
+                </span>
+              </button>
+
+              <!-- Invite Button -->
               <button
                 (click)="shareInvite()"
                 class="inline-flex items-center md:gap-2 gap-1 md:px-4 px-2 md:py-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-full transition duration-200 ease-out"
@@ -92,8 +141,9 @@ import { Subscription } from "rxjs";
                 </svg>
                 <span
                   class="md:text-[14px] md:leading-[14px] text-[11px] leading-[11px]"
-                  >Invite</span
                 >
+                  Invite
+                </span>
               </button>
             </div>
           </div>
@@ -118,7 +168,6 @@ import { Subscription } from "rxjs";
               >
                 You {{ !isVideoEnabled ? "(Camera Off)" : "" }}
                 {{ isScreenSharing ? "(Screen Sharing)" : "" }}
-                <!-- {{ getCurrentCameraLabel() }} -->
               </div>
             </div>
 
@@ -257,9 +306,6 @@ import { Subscription } from "rxjs";
                   d="M3 6m0 2a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2z"
                 />
               </svg>
-              <!-- <svg  class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18 17.75M6 17.25l2.364-2.364m8 0L18 17.25M6 17.25v-1.5M18 17.25v-1.5m0 0V15M6 15.75v-1.5m12 1.5v-1.5m0 0V13.5M6 14.25v-1.5"></path>
-              </svg> -->
               <svg
                 *ngIf="!isVideoEnabled"
                 xmlns="http://www.w3.org/2000/svg"
@@ -338,7 +384,6 @@ import { Subscription } from "rxjs";
               </svg>
             </button>
 
-            <!-- Camera Switch Button (in controls) -->
             <button
               *ngIf="isCameraSwitchSupported"
               (click)="switchCamera()"
@@ -373,47 +418,162 @@ import { Subscription } from "rxjs";
         </div>
       </div>
 
-      <!-- Chat Sidebar -->
-      <!-- <div class="w-80 bg-white border-l border-gray-200 flex flex-col">
-        <div class="p-4 border-b border-gray-200">
-          <h2 class="text-lg font-semibold text-gray-800">Chat</h2>
-        </div>
-
-        <div class="flex-1 overflow-y-auto p-4" #chatContainer>
-          <div *ngFor="let message of messages" 
-               [class]="'chat-message fade-in ' + (message.isOwn ? 'own' : 'other')">
-            <div class="text-xs text-gray-500 mb-1">
-              {{ message.username }} • {{ message.timestamp | date:'short' }}
+      <!-- Chat Panel -->
+      <div
+        class="fixed right-0 top-0 h-full w-80 bg-gray-800 shadow-2xl transform transition-transform duration-300 ease-in-out z-50"
+        [class.translate-x-0]="isChatOpen"
+        [class.translate-x-full]="!isChatOpen"
+      >
+        <div class="flex flex-col h-full">
+          <!-- Chat Header -->
+          <div
+            class="flex items-center justify-between p-4 bg-gray-700 border-b border-gray-600"
+          >
+            <div>
+              <h3 class="text-lg font-semibold text-white">Chat</h3>
+              <p class="text-sm text-gray-300">
+                {{ userCount }} participant(s)
+              </p>
             </div>
-            <div>{{ message.message }}</div>
-          </div>
-          <div *ngIf="messages.length === 0" class="text-center text-gray-500 mt-8">
-            <p>No messages yet</p>
-            <p class="text-sm">Start a conversation...</p>
-          </div>
-        </div>
-
-        <div class="p-4 border-t border-gray-200">
-          <form (ngSubmit)="sendMessage()" class="flex space-x-2">
-            <input
-              type="text"
-              [(ngModel)]="currentMessage"
-              name="message"
-              placeholder="Type a message..."
-              class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
             <button
-              type="submit"
-              [disabled]="!currentMessage.trim()"
-              class="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white rounded-lg transition-colors duration-200"
+              (click)="toggleChat()"
+              class="p-2 text-gray-400 hover:text-white transition-colors"
+              title="Close Chat"
             >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
               </svg>
             </button>
-          </form>
+          </div>
+
+          <!-- Chat Messages -->
+          <div class="flex-1 overflow-y-auto p-4 space-y-3" #chatMessages>
+            <!-- System Messages -->
+            <div
+              *ngFor="let notification of notifications"
+              class="text-center text-sm text-gray-400 py-2 px-3 bg-gray-700/50 rounded-lg mx-2"
+            >
+              {{ notification }}
+            </div>
+
+            <!-- Chat Messages -->
+            <div
+              *ngFor="let message of messages; trackBy: trackByMessageId"
+              class="flex"
+              [class.justify-end]="message.isOwn"
+              [class.justify-start]="!message.isOwn"
+            >
+              <div
+                class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg break-words"
+                [class]="
+                  message.isOwn
+                    ? 'bg-blue-600 text-white rounded-br-none'
+                    : 'bg-gray-600 text-white rounded-bl-none'
+                "
+              >
+                <div
+                  *ngIf="!message.isOwn"
+                  class="text-xs text-gray-300 mb-1 font-medium"
+                >
+                  {{ message.username }}
+                </div>
+                <div class="text-sm">{{ message.message }}</div>
+                <div
+                  class="text-xs mt-1 opacity-70"
+                  [class.text-blue-200]="message.isOwn"
+                  [class.text-gray-300]="!message.isOwn"
+                >
+                  {{ formatMessageTime(message.timestamp) }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Typing Indicators -->
+            <div *ngIf="typingUsers.length > 0" class="flex justify-start">
+              <div
+                class="bg-gray-600 text-white px-4 py-2 rounded-lg rounded-bl-none text-sm"
+              >
+                <div class="flex items-center space-x-2">
+                  <div class="flex space-x-1">
+                    <div
+                      class="w-2 h-2 bg-gray-300 rounded-full animate-bounce"
+                    ></div>
+                    <div
+                      class="w-2 h-2 bg-gray-300 rounded-full animate-bounce"
+                      style="animation-delay: 0.1s"
+                    ></div>
+                    <div
+                      class="w-2 h-2 bg-gray-300 rounded-full animate-bounce"
+                      style="animation-delay: 0.2s"
+                    ></div>
+                  </div>
+                  <span class="text-xs text-gray-300">
+                    {{ getTypingUsersText() }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Chat Input -->
+          <div class="p-4 bg-gray-700 border-t border-gray-600">
+            <div class="flex space-x-2">
+              <input
+                #chatInput
+                [(ngModel)]="newMessage"
+                (keyup.enter)="sendMessage()"
+                (keyup)="onTyping()"
+                (blur)="stopTyping()"
+                placeholder="Type a message..."
+                class="flex-1 px-3 py-2 bg-gray-600 text-white rounded-lg border border-gray-500 focus:outline-none focus:border-blue-500 placeholder-gray-400"
+                maxlength="500"
+              />
+              <button
+                (click)="sendMessage()"
+                [disabled]="!newMessage.trim() || !isConnectedToChat"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                title="Send Message"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <path d="m22 2-7 20-4-9-9-4Z" />
+                  <path d="M22 2 11 13" />
+                </svg>
+              </button>
+            </div>
+            <div class="text-xs text-gray-400 mt-1">
+              {{ newMessage.length }}/500
+            </div>
+          </div>
         </div>
-      </div> -->
+      </div>
+
+      <!-- Chat Overlay for Mobile -->
+      <div
+        *ngIf="isChatOpen"
+        class="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+        (click)="toggleChat()"
+      ></div>
     </div>
   `,
   styles: [
@@ -443,18 +603,6 @@ import { Subscription } from "rxjs";
         @apply scale-100;
       }
 
-      .chat-message {
-        @apply mb-4 p-3 rounded-lg max-w-xs;
-      }
-
-      .chat-message.own {
-        @apply bg-blue-500 text-white ml-auto;
-      }
-
-      .chat-message.other {
-        @apply bg-gray-100 text-gray-800;
-      }
-
       .fade-in {
         animation: fadeIn 0.3s ease-in;
       }
@@ -475,18 +623,53 @@ import { Subscription } from "rxjs";
           transform: translateY(0);
         }
       }
+
+      /* Custom scrollbar for chat */
+      .overflow-y-auto::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      .overflow-y-auto::-webkit-scrollbar-track {
+        background: #374151;
+      }
+
+      .overflow-y-auto::-webkit-scrollbar-thumb {
+        background: #6b7280;
+        border-radius: 3px;
+      }
+
+      .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+        background: #9ca3af;
+      }
+
+      /* Animate bounce for typing indicator */
+      @keyframes bounce {
+        0%,
+        80%,
+        100% {
+          transform: scale(0);
+        }
+        40% {
+          transform: scale(1);
+        }
+      }
+
+      .animate-bounce {
+        animation: bounce 1.5s infinite;
+      }
     `,
   ],
 })
 export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild("localVideo") localVideoRef!: ElementRef<HTMLVideoElement>;
   @ViewChild("remoteVideo") remoteVideoRef!: ElementRef<HTMLVideoElement>;
-  @ViewChild("chatContainer") chatContainer!: ElementRef<HTMLDivElement>;
+  @ViewChild("chatMessages") chatMessagesRef!: ElementRef<HTMLDivElement>;
+  @ViewChild("chatInput") chatInputRef!: ElementRef<HTMLInputElement>;
 
+  // Video call properties
   username = "";
   channelName = "";
   connectionStatus = "Connecting...";
-
   isMicEnabled = true;
   isVideoEnabled = true;
   isScreenSharing = false;
@@ -494,12 +677,22 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
   isCameraSwitchSupported = false;
   remoteUserConnected = false;
 
-  messages: ChatMessage[] = [];
-  currentMessage = "";
-
   private localVideoTrack: ILocalVideoTrack | null = null;
   private localAudioTrack: ILocalAudioTrack | null = null;
   private remoteUsersSubscription: Subscription | null = null;
+
+  // Chat properties
+  isChatOpen = false;
+  newMessage = "";
+  messages: ChatMessage[] = [];
+  notifications: string[] = [];
+  typingUsers: TypingUser[] = [];
+  userCount = 0;
+  isConnectedToChat = false;
+  unreadMessageCount = 0;
+
+  private chatSubscriptions: Subscription[] = [];
+  private userId = "";
 
   constructor(
     private route: ActivatedRoute,
@@ -509,10 +702,7 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
   ) {}
 
   ngOnInit() {
-    // Check if screen share is supported
     this.isScreenShareSupported = this.agoraService.isScreenShareSupported();
-
-    // Check if camera switch is supported
     this.isCameraSwitchSupported = this.agoraService.isCameraSwitchSupported();
 
     this.route.queryParams.subscribe((params) => {
@@ -525,14 +715,9 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
       }
 
       this.initializeCall();
+      this.initializeChat();
     });
 
-    this.chatService.messages$.subscribe((messages) => {
-      this.messages = messages;
-      setTimeout(() => this.scrollToBottom(), 100);
-    });
-
-    // Subscribe to remote users updates
     this.remoteUsersSubscription = this.agoraService.remoteUsers$.subscribe(
       (remoteUsers) => {
         this.updateRemoteVideo(remoteUsers);
@@ -546,9 +731,11 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnDestroy() {
     this.leaveCall();
+    this.disconnectChat();
     if (this.remoteUsersSubscription) {
       this.remoteUsersSubscription.unsubscribe();
     }
+    this.chatSubscriptions.forEach((sub) => sub.unsubscribe());
   }
 
   private async initializeCall() {
@@ -564,8 +751,6 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
       }
 
       this.connectionStatus = "Connected";
-
-      // Check camera switch support again after initialization
       this.isCameraSwitchSupported =
         this.agoraService.isCameraSwitchSupported();
     } catch (error) {
@@ -574,9 +759,84 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  private initializeChat() {
+    this.userId = this.generateUserId();
+
+    // Subscribe to chat observables
+    const messagesSubscription = this.chatService.messages$.subscribe(
+      (messages) => {
+        const previousCount = this.messages.length;
+        this.messages = messages;
+
+        // Count unread messages if chat is closed
+        if (!this.isChatOpen && messages.length > previousCount) {
+          const newMessages = messages.slice(previousCount);
+          const unreadMessages = newMessages.filter((msg) => !msg.isOwn);
+          this.unreadMessageCount += unreadMessages.length;
+        }
+
+        // Auto scroll to bottom when new messages arrive
+        setTimeout(() => this.scrollToBottom(), 100);
+      }
+    );
+
+    const connectionSubscription = this.chatService.connectionStatus$.subscribe(
+      (isConnected) => {
+        this.isConnectedToChat = isConnected;
+      }
+    );
+
+    const userCountSubscription = this.chatService.userCount$.subscribe(
+      (count) => {
+        this.userCount = count;
+      }
+    );
+
+    const typingSubscription = this.chatService.typingUsers$.subscribe(
+      (users) => {
+        this.typingUsers = users;
+        setTimeout(() => this.scrollToBottom(), 100);
+      }
+    );
+
+    const notificationsSubscription = this.chatService.notifications$.subscribe(
+      (notification) => {
+        if (notification) {
+          this.notifications.push(notification);
+          // Keep only last 10 notifications
+          if (this.notifications.length > 10) {
+            this.notifications = this.notifications.slice(-10);
+          }
+          setTimeout(() => this.scrollToBottom(), 100);
+        }
+      }
+    );
+
+    this.chatSubscriptions.push(
+      messagesSubscription,
+      connectionSubscription,
+      userCountSubscription,
+      typingSubscription,
+      notificationsSubscription
+    );
+
+    // Join the chat room
+    this.chatService.joinRoom(this.channelName, this.username, this.userId);
+  }
+
+  private disconnectChat() {
+    this.chatService.disconnect();
+    this.chatSubscriptions.forEach((sub) => sub.unsubscribe());
+    this.chatSubscriptions = [];
+  }
+
+  private generateUserId(): string {
+    return `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
   shareInvite() {
     const currentUrl = new URL(window.location.href);
-    currentUrl.searchParams.set("username", "Guest"); // Replace username with 'Guest'
+    currentUrl.searchParams.set("username", "Guest");
     const shareUrl = currentUrl.toString();
 
     const text = `Join my video call: ${shareUrl}`;
@@ -600,28 +860,20 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
       this.remoteUserConnected = true;
       const remoteUser = remoteUsers[0];
 
-      // Handle video track updates
       if (remoteUser.videoTrack && this.remoteVideoRef) {
-        // Stop any existing video first
         const videoElement = this.remoteVideoRef.nativeElement;
         if (videoElement.srcObject) {
           videoElement.srcObject = null;
         }
-
-        // Play the new video track
         remoteUser.videoTrack.play(videoElement);
       } else if (!remoteUser.videoTrack && this.remoteVideoRef) {
-        // Clear video when remote user turns off camera
         const videoElement = this.remoteVideoRef.nativeElement;
         if (videoElement.srcObject) {
           videoElement.srcObject = null;
         }
       }
-
-      // Audio is automatically handled in the service now
     } else {
       this.remoteUserConnected = false;
-      // Clear remote video when no users
       if (this.remoteVideoRef) {
         const videoElement = this.remoteVideoRef.nativeElement;
         if (videoElement.srcObject) {
@@ -631,6 +883,94 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  // Chat Methods
+  toggleChat() {
+    this.isChatOpen = !this.isChatOpen;
+    if (this.isChatOpen) {
+      this.unreadMessageCount = 0;
+      setTimeout(() => {
+        this.scrollToBottom();
+        if (this.chatInputRef) {
+          this.chatInputRef.nativeElement.focus();
+        }
+      }, 300);
+    }
+  }
+
+  sendMessage() {
+    if (!this.newMessage.trim() || !this.isConnectedToChat) {
+      return;
+    }
+
+    this.chatService.sendMessage(this.newMessage.trim());
+    this.newMessage = "";
+    this.chatService.stopTyping();
+
+    setTimeout(() => this.scrollToBottom(), 100);
+  }
+
+  onTyping() {
+    if (this.newMessage.trim()) {
+      this.chatService.startTyping();
+    } else {
+      this.chatService.stopTyping();
+    }
+  }
+
+  stopTyping() {
+    this.chatService.stopTyping();
+  }
+
+  private scrollToBottom() {
+    if (this.chatMessagesRef) {
+      const element = this.chatMessagesRef.nativeElement;
+      element.scrollTop = element.scrollHeight;
+    }
+  }
+
+  trackByMessageId(index: number, message: ChatMessage): any {
+    return message.id;
+  }
+
+  formatMessageTime(timestamp: Date): string {
+    const now = new Date();
+    const messageTime = new Date(timestamp);
+    const diffInMinutes = Math.floor(
+      (now.getTime() - messageTime.getTime()) / (1000 * 60)
+    );
+
+    if (diffInMinutes < 1) {
+      return "Just now";
+    } else if (diffInMinutes < 60) {
+      return `${diffInMinutes}m ago`;
+    } else if (diffInMinutes < 1440) {
+      // 24 hours
+      const hours = Math.floor(diffInMinutes / 60);
+      return `${hours}h ago`;
+    } else {
+      return (
+        messageTime.toLocaleDateString() +
+        " " +
+        messageTime.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      );
+    }
+  }
+
+  getTypingUsersText(): string {
+    if (this.typingUsers.length === 0) return "";
+    if (this.typingUsers.length === 1) {
+      return `${this.typingUsers[0].username} is typing...`;
+    } else if (this.typingUsers.length === 2) {
+      return `${this.typingUsers[0].username} and ${this.typingUsers[1].username} are typing...`;
+    } else {
+      return `${this.typingUsers.length} people are typing...`;
+    }
+  }
+
+  // Video Control Methods
   async toggleMicrophone() {
     this.isMicEnabled = await this.agoraService.toggleMicrophone();
   }
@@ -639,32 +979,26 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
     this.isVideoEnabled = await this.agoraService.toggleCamera();
   }
 
-  // Switch camera between front and rear
   async switchCamera() {
     try {
       const newVideoTrack = await this.agoraService.switchCamera();
       if (newVideoTrack && this.localVideoRef) {
-        // Update the local video element with the new track
         this.localVideoTrack = newVideoTrack;
         newVideoTrack.play(this.localVideoRef.nativeElement);
       }
     } catch (error) {
       console.error("Failed to switch camera:", error);
-      // You might want to show a user-friendly error message here
     }
   }
 
-  // Get current camera label for display
   getCurrentCameraLabel(): string {
     if (!this.isCameraSwitchSupported || this.isScreenSharing) {
       return "";
     }
-
     const facingMode = this.agoraService.getCurrentFacingMode();
     return facingMode === "user" ? "(Front Camera)" : "(Rear Camera)";
   }
 
-  // Get camera switch button class
   getCameraSwitchButtonClass(): string {
     if (!this.isVideoEnabled || this.isScreenSharing) {
       return "control-btn bg-gray-400 text-gray-600 cursor-not-allowed";
@@ -672,7 +1006,6 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
     return "control-btn bg-gray-600 text-white hover:bg-gray-500";
   }
 
-  // Get camera switch tooltip
   getCameraSwitchTooltip(): string {
     if (!this.isVideoEnabled) {
       return "Enable camera to switch";
@@ -680,8 +1013,7 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.isScreenSharing) {
       return "Stop screen sharing to switch camera";
     }
-    const currentMode = this.agoraService.getCurrentFacingMode();
-    return currentMode === "user" ? "Switch camera" : "Switch camera";
+    return "Switch camera";
   }
 
   async toggleScreenShare() {
@@ -694,7 +1026,6 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
       await this.agoraService.stopScreenShare();
       this.isScreenSharing = false;
 
-      // Restore camera video
       if (this.localVideoTrack && this.localVideoRef) {
         this.localVideoTrack.play(this.localVideoRef.nativeElement);
       }
@@ -735,23 +1066,8 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
   private async leaveCall() {
     try {
       await this.agoraService.leaveChannel();
-      this.chatService.clearMessages();
     } catch (error) {
       console.error("Error leaving call:", error);
-    }
-  }
-
-  sendMessage() {
-    if (this.currentMessage.trim()) {
-      this.chatService.sendMessage(this.currentMessage);
-      this.currentMessage = "";
-    }
-  }
-
-  private scrollToBottom() {
-    if (this.chatContainer) {
-      const element = this.chatContainer.nativeElement;
-      element.scrollTop = element.scrollHeight;
     }
   }
 }

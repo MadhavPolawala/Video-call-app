@@ -79,7 +79,7 @@ import { Subscription } from "rxjs";
               <!-- Chat Toggle Button -->
               <button
                 (click)="toggleChat()"
-                class="inline-flex items-center gap-1 md:gap-2 md:px-4 px-2 md:py-2 py-1 rounded-full transition duration-200 ease-out relative"
+                class="inline-flex items-center gap-1 md:gap-2 md:px-4 px-2.5 md:py-2 py-1.5 rounded-full transition duration-200 ease-out relative"
                 [class]="
                   isChatOpen
                     ? 'bg-blue-600 text-white'
@@ -119,7 +119,7 @@ import { Subscription } from "rxjs";
               <!-- Invite Button -->
               <button
                 (click)="shareInvite()"
-                class="inline-flex items-center md:gap-2 gap-1 md:px-4 px-2 md:py-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-full transition duration-200 ease-out"
+                class="inline-flex items-center md:gap-2 gap-1 md:px-4 px-2.5 md:py-2 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-full transition duration-200 ease-out"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"

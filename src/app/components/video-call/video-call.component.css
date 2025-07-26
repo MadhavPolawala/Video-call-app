@@ -1,203 +1,42 @@
-/* Video Container Styles */
 .video-container {
     border-radius: 12px;
     overflow: hidden;
-    position: relative;
-        background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
-        border: 1px solid rgba(55, 65, 81, 0.3);
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        transition: all 0.3s ease;
+    min-height: 300px;
 }
 
-.video-container:hover {
-    border-color: rgba(55, 65, 81, 0.5);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-}
-
-/* Video Element Styles */
 .video-element {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    background-color: #1f2937;
-        border-radius: 12px;
+    background: #1f2937;
 }
 
-/* Control Button Styles */
 .control-btn {
-    display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 3.5rem;
-        height: 3.5rem;
-        border-radius: 50%;
-        border: none;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        font-weight: 500;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
-.control-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 8px -1px rgba(0, 0, 0, 0.15);
-}
-
-.control-btn:active {
-    transform: translateY(0);
+    @apply w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 hover:scale-105;
 }
 
 .control-btn:disabled {
-    cursor: not-allowed;
-    transform: none;
+    @apply opacity-50 cursor-not-allowed;
 }
 
-/* Grid Layout Responsive Adjustments */
+.control-btn:disabled:hover {
+    @apply scale-100;
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+
 @media (max-width: 768px) {
     .video-container {
-        min-height: 200px;
-        }
-        
-        .control-btn {
-            width: 3rem;
-            height: 3rem;
-        }
-        }
-        
-        @media (max-width: 640px) {
-            .video-container {
-                min-height: 180px;
-            }
-        
-            .control-btn {
-                width: 2.75rem;
-                height: 2.75rem;
-            }
-        }
-        
-        /* Custom Grid Classes for Different User Counts */
-        .grid-2-users {
-            grid-template-columns: 1fr;
-        }
-        
-        @media (min-width: 768px) {
-            .grid-2-users {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-        
-        .grid-3-4-users {
-            grid-template-columns: 1fr 1fr;
-        }
-        
-        .grid-5-6-users {
-            grid-template-columns: 1fr 1fr;
-        }
-        
-        @media (min-width: 768px) {
-            .grid-5-6-users {
-                grid-template-columns: 1fr 1fr 1fr;
-            }
-        }
-        
-        .grid-7-9-users {
-            grid-template-columns: 1fr 1fr 1fr;
-        }
-        
-        .grid-10-plus-users {
-            grid-template-columns: 1fr 1fr 1fr;
-        }
-        
-        @media (min-width: 768px) {
-            .grid-10-plus-users {
-                grid-template-columns: 1fr 1fr 1fr 1fr;
-            }
-        }
-        
-        /* Video Container Size Adjustments */
-        .video-small {
-            max-height: 200px;
-        }
-        
-        .video-medium {
-    max-height: 300px;
-    }
-.video-large {
-    max-height: 400px;
+        max-height: 300px;
+    
 }
 
-/* User Info Overlay Styles */
-.user-info-overlay {
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
-    backdrop-filter: blur(4px);
-}
-
-/* Status Indicators */
-.status-indicator {
-    animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-
-    0%,
-    100% {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: 0.7;
-    }
-}
-
-/* Scroll styles for video grid on mobile */
-.video-grid-container {
-    scrollbar-width: thin;
-    scrollbar-color: rgba(55, 65, 81, 0.8) transparent;
-}
-
-.video-grid-container::-webkit-scrollbar {
-    width: 6px;
-}
-
-.video-grid-container::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.video-grid-container::-webkit-scrollbar-thumb {
-    background-color: rgba(55, 65, 81, 0.8);
-    border-radius: 3px;
-}
-
-.video-grid-container::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(75, 85, 99, 0.9);
-}
-
-/* Animation for new participants joining */
-@keyframes slideInFromRight {
+@keyframes fadeIn {
     from {
         opacity: 0;
-        transform: translateX(100px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-.new-participant {
-    animation: slideInFromRight 0.5s ease-out;
-}
-
-/* Improved chat styles */
-.chat-message {
-    animation: slideInFromBottom 0.3s ease-out;
-}
-
-@keyframes slideInFromBottom {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
+        transform: translateY(10px);
     }
 
     to {
@@ -206,48 +45,39 @@
     }
 }
 
-/* Loading states */
-.loading-spinner {
-    animation: spin 1s linear infinite;
+/* Custom scrollbar for chat */
+.overflow-y-auto::-webkit-scrollbar {
+    width: 6px;
 }
 
-@keyframes spin {
-    from {
-        transform: rotate(0deg);
+.overflow-y-auto::-webkit-scrollbar-track {
+    background: #374151;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb {
+    background: #6b7280;
+    border-radius: 3px;
+}
+
+.overflow-y-auto::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+}
+
+/* Animate bounce for typing indicator */
+@keyframes bounce {
+
+    0%,
+    80%,
+    100% {
+        transform: scale(0);
     }
 
-        to {
-            transform: rotate(360deg);
-        }
+                40% {
+                    transform: scale(1);
+                }
 }
 
-/* Responsive text sizes */
-@media (max-width: 640px) {
-    .user-name-text {
-        font-size: 0.75rem;
-    }
-
-        .status-text {
-            font-size: 0.625rem;
-        }
-        }
-
-/* Focus states for accessibility */
-.control-btn:focus {
-    outline: 2px solid #3b82f6;
-    outline-offset: 2px;
-}
-button:focus-visible {
-    outline: 2px solid #3b82f6;
-    outline-offset: 2px;
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-    .video-container {
-        border: 2px solid #ffffff;
-    }
-.control-btn {
-    border: 2px solid currentColor;
+.animate-bounce {
+    animation: bounce 1.5s infinite;
 }
 }

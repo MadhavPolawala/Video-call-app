@@ -5,8 +5,6 @@ import {
   ElementRef,
   ViewChild,
   AfterViewInit,
-  ViewChildren,
-  QueryList,
 } from "@angular/core";
 import { CommonModule } from "@angular/common";
 import { FormsModule } from "@angular/forms";
@@ -21,13 +19,6 @@ import {
 import { ILocalVideoTrack, ILocalAudioTrack } from "agora-rtc-sdk-ng";
 import { Subscription } from "rxjs";
 
-interface RemoteUser {
-  uid: string | number;
-  username?: string;
-  videoTrack: any;
-  audioTrack: any;
-}
-
 @Component({
   selector: "app-video-call",
   standalone: true,
@@ -37,11 +28,9 @@ interface RemoteUser {
 })
 export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild("localVideo") localVideoRef!: ElementRef<HTMLVideoElement>;
+  @ViewChild("remoteVideo") remoteVideoRef!: ElementRef<HTMLVideoElement>;
   @ViewChild("chatMessages") chatMessagesRef!: ElementRef<HTMLDivElement>;
   @ViewChild("chatInput") chatInputRef!: ElementRef<HTMLInputElement>;
-  @ViewChildren("remoteVideo") remoteVideoRefs!: QueryList<
-    ElementRef<HTMLVideoElement>
-  >;
 
   // Video call properties
   username = "";
@@ -52,7 +41,8 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
   isScreenSharing = false;
   isScreenShareSupported = false;
   isCameraSwitchSupported = false;
-  remoteUsers: RemoteUser[] = [];
+  remoteUserConnected = false;
+  remoteUsername = ""; // Add this to store remote user's name
 
   private localVideoTrack: ILocalVideoTrack | null = null;
   private localAudioTrack: ILocalAudioTrack | null = null;
@@ -67,7 +57,7 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
   userCount = 0;
   isConnectedToChat = false;
   unreadMessageCount = 0;
-  roomUsers: RoomUser[] = [];
+  roomUsers: RoomUser[] = []; // Add this to store room users
 
   private chatSubscriptions: Subscription[] = [];
   private userId = "";
@@ -98,16 +88,13 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
 
     this.remoteUsersSubscription = this.agoraService.remoteUsers$.subscribe(
       (remoteUsers) => {
-        this.updateRemoteUsers(remoteUsers);
+        this.updateRemoteVideo(remoteUsers);
       }
     );
   }
 
   ngAfterViewInit() {
     // ViewChild elements are now available
-    this.remoteVideoRefs.changes.subscribe(() => {
-      this.updateRemoteVideoElements();
-    });
   }
 
   ngOnDestroy() {
@@ -173,10 +160,11 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
       }
     );
 
+    // Add subscription for room users to get usernames
     const roomUsersSubscription = this.chatService.roomUsers$.subscribe(
       (users) => {
         this.roomUsers = users;
-        this.updateRemoteUsernames();
+        this.updateRemoteUsername();
       }
     );
 
@@ -204,7 +192,7 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
       messagesSubscription,
       connectionSubscription,
       userCountSubscription,
-      roomUsersSubscription,
+      roomUsersSubscription, // Add this subscription
       typingSubscription,
       notificationsSubscription
     );
@@ -213,70 +201,19 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
     this.chatService.joinRoom(this.channelName, this.username, this.userId);
   }
 
-  private updateRemoteUsers(agoraRemoteUsers: any[]) {
-    // Create a map of existing users for efficient lookup
-    const existingUsersMap = new Map(
-      this.remoteUsers.map((user) => [user.uid, user])
-    );
-
-    // Update remote users array
-    this.remoteUsers = agoraRemoteUsers.map((agoraUser) => {
-      const existingUser = existingUsersMap.get(agoraUser.uid);
-      return {
-        uid: agoraUser.uid,
-        username:
-          existingUser?.username || this.getUsernameByUid(agoraUser.uid),
-        videoTrack: agoraUser.videoTrack,
-        audioTrack: agoraUser.audioTrack,
-      };
-    });
-
-    // Update video elements after a short delay to ensure DOM is updated
-    setTimeout(() => this.updateRemoteVideoElements(), 100);
-  }
-
-  private updateRemoteVideoElements() {
-    if (!this.remoteVideoRefs) return;
-
-    const videoElements = this.remoteVideoRefs.toArray();
-
-    this.remoteUsers.forEach((user, index) => {
-      const videoElement = videoElements[index];
-      if (videoElement && user.videoTrack) {
-        const videoEl = videoElement.nativeElement;
-        if (videoEl.srcObject) {
-          videoEl.srcObject = null;
-        }
-        user.videoTrack.play(videoEl);
-      }
-    });
-  }
-
-  private updateRemoteUsernames() {
-    // Update usernames for remote users based on room users
-    this.remoteUsers.forEach((remoteUser) => {
-      const roomUser = this.roomUsers.find(
-        (ru) => ru.username !== this.username
+  // Add method to update remote username
+  private updateRemoteUsername() {
+    if (this.roomUsers.length > 1) {
+      // Find the remote user (not the current user)
+      const remoteUser = this.roomUsers.find(
+        (user) => user.username !== this.username
       );
-      if (roomUser && !remoteUser.username) {
-        remoteUser.username = roomUser.username;
+      if (remoteUser) {
+        this.remoteUsername = remoteUser.username;
       }
-    });
-  }
-
-  private getUsernameByUid(uid: string | number): string {
-    // Try to map UID to username from room users
-    // This is a simplified approach - you might need to enhance this based on your needs
-    const nonCurrentUsers = this.roomUsers.filter(
-      (user) => user.username !== this.username
-    );
-    const index = this.remoteUsers.findIndex((user) => user.uid === uid);
-
-    if (nonCurrentUsers[index]) {
-      return nonCurrentUsers[index].username;
+    } else {
+      this.remoteUsername = "";
     }
-
-    return `User ${uid}`;
   }
 
   private disconnectChat() {
@@ -310,32 +247,31 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  // Grid layout helper methods
-  getGridClass(): string {
-    const totalUsers = this.remoteUsers.length + 1; // +1 for local user
+  private updateRemoteVideo(remoteUsers: any[]) {
+    if (remoteUsers.length > 0) {
+      this.remoteUserConnected = true;
+      const remoteUser = remoteUsers[0];
 
-    if (totalUsers <= 2) {
-      return "grid-cols-1 md:grid-cols-2";
-    } else if (totalUsers <= 4) {
-      return "grid-cols-2";
-    } else if (totalUsers <= 6) {
-      return "grid-cols-2 md:grid-cols-3";
-    } else if (totalUsers <= 9) {
-      return "grid-cols-3";
+      if (remoteUser.videoTrack && this.remoteVideoRef) {
+        const videoElement = this.remoteVideoRef.nativeElement;
+        if (videoElement.srcObject) {
+          videoElement.srcObject = null;
+        }
+        remoteUser.videoTrack.play(videoElement);
+      } else if (!remoteUser.videoTrack && this.remoteVideoRef) {
+        const videoElement = this.remoteVideoRef.nativeElement;
+        if (videoElement.srcObject) {
+          videoElement.srcObject = null;
+        }
+      }
     } else {
-      return "grid-cols-3 md:grid-cols-4";
-    }
-  }
-
-  getVideoContainerClass(): string {
-    const totalUsers = this.remoteUsers.length + 1;
-
-    if (totalUsers <= 2) {
-      return "aspect-video";
-    } else if (totalUsers <= 4) {
-      return "aspect-video";
-    } else {
-      return "aspect-video max-h-48";
+      this.remoteUserConnected = false;
+      if (this.remoteVideoRef) {
+        const videoElement = this.remoteVideoRef.nativeElement;
+        if (videoElement.srcObject) {
+          videoElement.srcObject = null;
+        }
+      }
     }
   }
 
@@ -386,10 +322,6 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
 
   trackByMessageId(index: number, message: ChatMessage): any {
     return message.id;
-  }
-
-  trackByUserId(index: number, user: RemoteUser): any {
-    return user.uid;
   }
 
   formatMessageTime(timestamp: Date): string {

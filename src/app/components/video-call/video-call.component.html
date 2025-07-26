@@ -82,7 +82,7 @@
                     <video #localVideo class="video-element" autoplay muted playsinline></video>
                     <div
                         class="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-lg text-sm">
-                        You {{ !isVideoEnabled ? "(Camera Off)" : "" }}
+                        {{ username }} {{ !isVideoEnabled ? "(Camera Off)" : "" }}
                         {{ isScreenSharing ? "(Screen Sharing)" : "" }}
                     </div>
                 </div>
@@ -93,7 +93,7 @@
                     <div
                         class="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-lg text-sm">
                         {{
-                        remoteUserConnected ? "Remote User" : "Waiting for user..."
+                        remoteUserConnected ? remoteUsername : "Waiting for user..."
                         }}
                     </div>
                     <div *ngIf="!remoteUserConnected" class="absolute inset-0 flex items-center justify-center">

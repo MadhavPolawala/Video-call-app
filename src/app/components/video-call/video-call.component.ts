@@ -42,6 +42,7 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
   isScreenShareSupported = false;
   isCameraSwitchSupported = false;
   remoteUserConnected = false;
+  remoteUsername = ""; // Add this to store remote user's name
 
   private localVideoTrack: ILocalVideoTrack | null = null;
   private localAudioTrack: ILocalAudioTrack | null = null;
@@ -56,6 +57,7 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
   userCount = 0;
   isConnectedToChat = false;
   unreadMessageCount = 0;
+  roomUsers: RoomUser[] = []; // Add this to store room users
 
   private chatSubscriptions: Subscription[] = [];
   private userId = "";
@@ -158,6 +160,14 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
       }
     );
 
+    // Add subscription for room users to get usernames
+    const roomUsersSubscription = this.chatService.roomUsers$.subscribe(
+      (users) => {
+        this.roomUsers = users;
+        this.updateRemoteUsername();
+      }
+    );
+
     const typingSubscription = this.chatService.typingUsers$.subscribe(
       (users) => {
         this.typingUsers = users;
@@ -182,12 +192,28 @@ export class VideoCallComponent implements OnInit, OnDestroy, AfterViewInit {
       messagesSubscription,
       connectionSubscription,
       userCountSubscription,
+      roomUsersSubscription, // Add this subscription
       typingSubscription,
       notificationsSubscription
     );
 
     // Join the chat room
     this.chatService.joinRoom(this.channelName, this.username, this.userId);
+  }
+
+  // Add method to update remote username
+  private updateRemoteUsername() {
+    if (this.roomUsers.length > 1) {
+      // Find the remote user (not the current user)
+      const remoteUser = this.roomUsers.find(
+        (user) => user.username !== this.username
+      );
+      if (remoteUser) {
+        this.remoteUsername = remoteUser.username;
+      }
+    } else {
+      this.remoteUsername = "";
+    }
   }
 
   private disconnectChat() {
